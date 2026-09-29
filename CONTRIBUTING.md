@@ -29,6 +29,27 @@ dotnet build WinterMP.sln
 
 Set `WinterMpDeployToGame` to `true` in that file if you want each build copied straight into the game's `BepInEx\plugins` folder.
 
+### BepInEx on My Winter Car: one config change
+
+Out of the box, BepInEx 5 crashes My Winter Car at launch. Its default hook runs inside `UnityEngine`, and the game's Unity 5.0 runtime does not survive that. Launch the game once so BepInEx writes its config, then set this in `BepInEx\config\BepInEx.cfg`:
+
+```ini
+[Preloader.Entrypoint]
+Assembly = PlayMaker.dll
+Type = PlayMakerFSM
+Method = .cctor
+```
+
+That hooks PlayMaker instead, which wakes up in the first scene anyway. Tested with BepInEx 5.4.21 and 5.4.23.5 (x64).
+
+### Development launch flags
+
+The in-game plugin and census understand a few extra launch options, handy for scripted test runs:
+
+- `-wintermp-connect <host[:port]>` joins a server once the first level has loaded
+- `-wintermp-steam-probe` checks lobby and rich presence support through the game's Steam client
+- `-wintermp-census-exit-after <level>` writes a census of that level, then ends the game without saving (the census otherwise runs a few seconds after every level load, or on F9)
+
 ## Making changes
 
 - **Small, focused pull requests.** One idea per PR is much easier to review.

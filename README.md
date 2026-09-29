@@ -49,7 +49,9 @@ In-game parts build against your own copy of the game: copy `Directory.Build.tar
 |---|---|
 | `src/WinterMP.Core` | Networking and session logic. No Unity and no game code; one source builds for both the game's 2015-era runtime and modern .NET. |
 | `src/WinterMP.Server` | The dedicated server. |
+| `src/WinterMP.Shim` | The in-game plugin (BepInEx). The only part of the mod that touches the game. |
 | `tools/WinterMP.Bot` | A headless test player, handy for checking a server is reachable. |
+| `tools/WinterMP.Census` | A development tool that catalogues the game's internals, so we can see what changed after each game update. |
 | `tests` | The test suite. Needs no game install. |
 
 ## About

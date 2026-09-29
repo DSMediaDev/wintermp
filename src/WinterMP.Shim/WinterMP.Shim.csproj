@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The in-game plugin, loaded by BepInEx 5. The only product assembly that touches the game.
+       net35 because My Winter Car runs Unity 5.0's Mono (the .NET 3.5 profile). -->
+  <PropertyGroup>
+    <TargetFramework>net35</TargetFramework>
+    <AssemblyName>WinterMP.Shim</AssemblyName>
+    <RootNamespace>WinterMP.Shim</RootNamespace>
+    <WinterMpGameProject>true</WinterMpGameProject>
+    <WinterMpPluginFolder>WinterMP</WinterMpPluginFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WinterMP.Core\WinterMP.Core.csproj" />
+  </ItemGroup>
+
+  <!-- BepInPlugin needs the version as a compile-time constant: generate it from Directory.Build.props
+       so the one version source stays the only one. -->
+  <Target Name="WinterMpPluginInfo" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_WinterMpPluginInfo>$(IntermediateOutputPath)PluginInfo.g.cs</_WinterMpPluginInfo>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(_WinterMpPluginInfo)" Overwrite="true" WriteOnlyWhenDifferent="true"
+                      Lines="namespace WinterMP.Shim { internal static class PluginInfo { public const string Version = &quot;$(Version)&quot;%3B } }" />
+    <ItemGroup>
+      <Compile Include="$(_WinterMpPluginInfo)" />
+      <FileWrites Include="$(_WinterMpPluginInfo)" />
+    </ItemGroup>
+  </Target>
+
+</Project>

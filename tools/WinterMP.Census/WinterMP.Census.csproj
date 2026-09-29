@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Development tool, loaded by BepInEx: catalogues the game's PlayMaker FSMs, global variables
+       and physics objects into text files. Run it after every game update and diff the output to
+       see exactly what changed. Never shipped to players. -->
+  <PropertyGroup>
+    <TargetFramework>net35</TargetFramework>
+    <AssemblyName>WinterMP.Census</AssemblyName>
+    <RootNamespace>WinterMP.Census</RootNamespace>
+    <WinterMpGameProject>true</WinterMpGameProject>
+    <WinterMpPluginFolder>WinterMP.Census</WinterMpPluginFolder>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>
