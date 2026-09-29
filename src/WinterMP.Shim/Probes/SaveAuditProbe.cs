@@ -18,17 +18,16 @@ namespace WinterMP.Shim.Probes;
 /// FSM's state), then a second save with the recorders off to time it cleanly. Comparing the audited
 /// window against the control window separates the save's side effects from the world's normal churn.
 /// Results go to plain files in the chosen folder, not the log (the log is buffered and lost on a kill).
-/// With restore on, every FSM the save moved is switched back to the state it was in before (the game
-/// only ever saves right before reloading the level, so many of its save states are dead ends), and a
-/// later window shows whether the world came back to life.
+/// With a save capture given, saves go through it (so every FSM the save moved is put back), and a later
+/// window shows whether the world came back to life. Without one, saves are bare broadcasts.
 /// </summary>
 internal sealed class SaveAuditProbe
 {
     private const float ControlAt = 30f;
     private const float AuditedSaveAt = 45f;
-    private const float PostAt = 60f;
-    private const float CleanSaveAt = 75f;
-    private const int RestoreAfterFrames = 2;
+    private const float PostAt = 55f;
+    private const float PostSeconds = 20f;
+    private const float CleanSaveAt = 80f;
     private const float WindowSeconds = 8f;
     private const float SlowFrameSeconds = 0.1f;
 
@@ -38,25 +37,23 @@ internal sealed class SaveAuditProbe
 
     private readonly ILog _log;
     private readonly string _folder;
-    private readonly bool _restore;
+    private readonly SaveCapture? _capture;
     private readonly StringBuilder _summary = new StringBuilder();
     private readonly StringBuilder _frames = new StringBuilder("time\tframe\tdelta_ms\n");
-    private Dictionary<Fsm, FsmState>? _preSave;
-    private int _restoreAtFrame = -1;
     private float _startedAt = -1f;
     private int _step;
     private string? _window;
     private float _windowEndsAt;
     private List<string>? _before;
 
-    private SaveAuditProbe(ILog log, string folder, bool restore)
+    private SaveAuditProbe(ILog log, string folder, SaveCapture? capture)
     {
         _log = log;
         _folder = folder;
-        _restore = restore;
+        _capture = capture;
     }
 
-    public static SaveAuditProbe? Create(Harmony harmony, ILog log, string folder, bool restore)
+    public static SaveAuditProbe? Create(Harmony harmony, ILog log, string folder, SaveCapture? capture)
     {
         var process = AccessTools.Method(typeof(Fsm), "ProcessEvent", new[] { typeof(FsmEvent), typeof(FsmEventData) });
         var enter = AccessTools.Method(typeof(Fsm), "EnterState", new[] { typeof(FsmState) });
@@ -69,8 +66,8 @@ internal sealed class SaveAuditProbe
         Directory.CreateDirectory(folder);
         harmony.Patch(process, prefix: new HarmonyMethod(typeof(SaveAuditProbe), nameof(ProcessPrefix)));
         harmony.Patch(enter, prefix: new HarmonyMethod(typeof(SaveAuditProbe), nameof(EnterPrefix)));
-        log.Info("Save audit: results go to " + folder + (restore ? ", restoring FSM states after each save." : "."));
-        return new SaveAuditProbe(log, folder, restore);
+        log.Info("Save audit: results go to " + folder + (capture != null ? ", saving through save capture." : ", saving with bare broadcasts."));
+        return new SaveAuditProbe(log, folder, capture);
     }
 
     /// <summary>Starts the schedule. Call when the game level has loaded.</summary>
@@ -87,7 +84,6 @@ internal sealed class SaveAuditProbe
         if (_startedAt < 0f) return;
         var delta = Time.unscaledDeltaTime;
         if (delta >= SlowFrameSeconds) _frames.Append(now.ToString("0.000")).Append('\t').Append(Time.frameCount).Append('\t').Append((delta * 1000f).ToString("0")).Append('\n');
-        if (_restoreAtFrame >= 0 && Time.frameCount >= _restoreAtFrame) Restore();
         if (_window != null && now >= _windowEndsAt) EndWindow();
         var elapsed = now - _startedAt;
         if (_step == 0 && elapsed >= ControlAt)
@@ -101,12 +97,14 @@ internal sealed class SaveAuditProbe
             BeginWindow("save", now);
             Save("audited save");
         }
-        else if (_step == 2 && _window == null && _restore && elapsed >= PostAt)
+        else if (_step == 2 && _window == null && _capture != null && elapsed >= PostAt)
         {
             _step = 3;
             BeginWindow("post", now);
+            // The world has loops of 10 s and more; a short window misses them and reads as dead.
+            _windowEndsAt = now + PostSeconds;
         }
-        else if (_step == 2 && !_restore)
+        else if (_step == 2 && _capture == null)
         {
             _step = 3;
         }
@@ -129,56 +127,24 @@ internal sealed class SaveAuditProbe
     private void Save(string label)
     {
         var frame = Time.frameCount;
-        if (_restore)
+        if (_capture != null)
         {
-            _preSave = new Dictionary<Fsm, FsmState>();
-            foreach (var component in PlayMakerFSM.FsmList)
+            var started = _capture.Capture(result =>
             {
-                var fsm = component.Fsm;
-                if (fsm != null && fsm.ActiveState != null) _preSave[fsm] = fsm.ActiveState;
-            }
-
-            _restoreAtFrame = frame + RestoreAfterFrames;
+                Write("restored-" + result.Frame + ".tsv", result.Restored.OrderBy(line => line, StringComparer.Ordinal));
+                Note(label + ": saved in " + result.SaveMilliseconds + " ms on frame " + result.Frame + "; " + result.Heard + " FSMs heard it, " + result.Moved + " moved, "
+                    + result.RestoredParked + " put back at once, " + result.RestoredLate + " after settling, " + result.FoundTheirWay + " found their own way back, "
+                    + result.Failed + " failed; settled in " + result.SettleSeconds.ToString("0.00") + " s.");
+                Flush();
+            });
+            Note(label + (started ? ": saved; parked FSMs put back, the rest settling." : ": save capture was busy, nothing saved."));
+            return;
         }
 
         var clock = Stopwatch.StartNew();
         PlayMakerFSM.BroadcastEvent("SAVEGAME");
         clock.Stop();
         Note(label + ": SAVEGAME broadcast took " + clock.ElapsedMilliseconds + " ms on frame " + frame + " (level " + Application.loadedLevelName + ").");
-    }
-
-    // Puts every FSM the save moved back where it was. Entering a state runs its actions again, which
-    // for the idle and polling states the game saves from is harmless; that is what this run checks.
-    private void Restore()
-    {
-        _restoreAtFrame = -1;
-        var switchState = AccessTools.Method(typeof(Fsm), "SwitchState");
-        if (_preSave == null || switchState == null) return;
-        var clock = Stopwatch.StartNew();
-        var restored = 0;
-        var failed = 0;
-        var lines = new List<string>();
-        foreach (var pair in _preSave)
-        {
-            var fsm = pair.Key;
-            try
-            {
-                if (fsm.ActiveState == pair.Value || fsm.ActiveState == null) continue;
-                lines.Add(PathOf(fsm) + "\t" + fsm.Name + "\t" + fsm.ActiveState.Name + " -> " + pair.Value.Name);
-                switchState.Invoke(fsm, new object[] { pair.Value });
-                restored++;
-            }
-            catch (Exception)
-            {
-                failed++;
-            }
-        }
-
-        clock.Stop();
-        _preSave = null;
-        lines.Sort(StringComparer.Ordinal);
-        Write("restored-" + Time.frameCount + ".tsv", lines);
-        Note("Restored " + restored + " FSMs to their pre-save state in " + clock.ElapsedMilliseconds + " ms (" + failed + " failed).");
     }
 
     private void BeginWindow(string name, float now)

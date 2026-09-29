@@ -41,6 +41,7 @@ public sealed class Plugin : BaseUnityPlugin
     private string? _saveAuditFolder;
     private bool _saveAuditRestore;
     private SaveAuditProbe? _saveAudit;
+    private SaveCapture? _saveCapture;
 
     private void Awake()
     {
@@ -79,7 +80,8 @@ public sealed class Plugin : BaseUnityPlugin
         if (eventProbe.Value) FsmEventProbe.Install(_harmony, _log);
         if (saveTrace.Value) SaveTraceProbe.Install(_harmony, _log);
         if (_watch != null) FsmWatchProbe.Install(_harmony, _log, _watch);
-        if (_saveAuditFolder != null) _saveAudit = SaveAuditProbe.Create(_harmony, _log, _saveAuditFolder, _saveAuditRestore);
+        _saveCapture = SaveCapture.Create(_harmony, _log);
+        if (_saveAuditFolder != null) _saveAudit = SaveAuditProbe.Create(_harmony, _log, _saveAuditFolder, _saveAuditRestore ? _saveCapture : null);
         _saveRedirect?.InstallFixedNames(_harmony);
         if (worldProbe.Value) _world = new WorldProbe(_log);
         _steam = new SteamProbe(_log);
@@ -99,6 +101,7 @@ public sealed class Plugin : BaseUnityPlugin
         _steam.Tick(now);
         _world?.Tick(now);
         FsmEventProbe.Tick(now);
+        _saveCapture?.Tick();
         _saveAudit?.Tick(now);
         if (_autoAt >= 0f && now >= _autoAt)
         {
@@ -117,9 +120,9 @@ public sealed class Plugin : BaseUnityPlugin
         {
             // What a toilet does, minus the trip back to the main menu that follows it.
             _saveGameAt = -1f;
-            Logger.LogInfo("Broadcasting SAVEGAME in session (level " + Application.loadedLevelName + ").");
-            PlayMakerFSM.BroadcastEvent("SAVEGAME");
-            Logger.LogInfo("SAVEGAME broadcast returned.");
+            Logger.LogInfo("Saving in session (level " + Application.loadedLevelName + ").");
+            if (_saveCapture != null) _saveCapture.Capture();
+            else PlayMakerFSM.BroadcastEvent("SAVEGAME");
         }
 
         if (_exitAt >= 0f && now >= _exitAt)
