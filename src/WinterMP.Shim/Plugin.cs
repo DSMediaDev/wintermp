@@ -38,6 +38,9 @@ public sealed class Plugin : BaseUnityPlugin
     private float _saveGameAfterSeconds = -1f;
     private float _saveGameAt = -1f;
     private string? _watch;
+    private string? _saveAuditFolder;
+    private bool _saveAuditRestore;
+    private SaveAuditProbe? _saveAudit;
 
     private void Awake()
     {
@@ -57,6 +60,8 @@ public sealed class Plugin : BaseUnityPlugin
             if (args[i] == "-wintermp-savegame-after-seconds" && i + 1 < args.Length) float.TryParse(args[i + 1], out _saveGameAfterSeconds);
             if (args[i] == "-wintermp-exit-after-seconds" && i + 1 < args.Length) float.TryParse(args[i + 1], out _exitAfterSeconds);
             if (args[i] == "-wintermp-watch" && i + 1 < args.Length) _watch = args[i + 1];
+            if (args[i] == "-wintermp-save-audit" && i + 1 < args.Length) _saveAuditFolder = args[i + 1];
+            if (args[i] == "-wintermp-save-restore") _saveAuditRestore = true;
         }
 
         var address = Config.Bind("Session", "ServerAddress", "127.0.0.1", "Dedicated server to join (host or host:port).");
@@ -74,6 +79,7 @@ public sealed class Plugin : BaseUnityPlugin
         if (eventProbe.Value) FsmEventProbe.Install(_harmony, _log);
         if (saveTrace.Value) SaveTraceProbe.Install(_harmony, _log);
         if (_watch != null) FsmWatchProbe.Install(_harmony, _log, _watch);
+        if (_saveAuditFolder != null) _saveAudit = SaveAuditProbe.Create(_harmony, _log, _saveAuditFolder, _saveAuditRestore);
         _saveRedirect?.InstallFixedNames(_harmony);
         if (worldProbe.Value) _world = new WorldProbe(_log);
         _steam = new SteamProbe(_log);
@@ -93,6 +99,7 @@ public sealed class Plugin : BaseUnityPlugin
         _steam.Tick(now);
         _world?.Tick(now);
         FsmEventProbe.Tick(now);
+        _saveAudit?.Tick(now);
         if (_autoAt >= 0f && now >= _autoAt)
         {
             _autoAt = -1f;
@@ -163,6 +170,7 @@ public sealed class Plugin : BaseUnityPlugin
 
         if (_exitAfterSeconds > 0f && Application.loadedLevelName == "GAME") _exitAt = Time.realtimeSinceStartup + _exitAfterSeconds;
         if (_saveGameAfterSeconds > 0f && Application.loadedLevelName == "GAME") _saveGameAt = Time.realtimeSinceStartup + _saveGameAfterSeconds;
+        if (Application.loadedLevelName == "GAME") _saveAudit?.Start(Time.realtimeSinceStartup);
         if (level != 1 && level != 3) Logger.LogInfo("Level " + level + " (" + Application.loadedLevelName + ") loaded.");
         // One shot per process: a later level load must not toggle the session off again.
         if ((_autoConnect != null || _autoSteamProbe) && !_autoDone)
