@@ -37,6 +37,7 @@ public sealed class Plugin : BaseUnityPlugin
     private float _exitAt = -1f;
     private float _saveGameAfterSeconds = -1f;
     private float _saveGameAt = -1f;
+    private string? _watch;
 
     private void Awake()
     {
@@ -55,6 +56,7 @@ public sealed class Plugin : BaseUnityPlugin
             if (args[i] == "-wintermp-auto-continue") _autoContinue = true;
             if (args[i] == "-wintermp-savegame-after-seconds" && i + 1 < args.Length) float.TryParse(args[i + 1], out _saveGameAfterSeconds);
             if (args[i] == "-wintermp-exit-after-seconds" && i + 1 < args.Length) float.TryParse(args[i + 1], out _exitAfterSeconds);
+            if (args[i] == "-wintermp-watch" && i + 1 < args.Length) _watch = args[i + 1];
         }
 
         var address = Config.Bind("Session", "ServerAddress", "127.0.0.1", "Dedicated server to join (host or host:port).");
@@ -71,6 +73,7 @@ public sealed class Plugin : BaseUnityPlugin
         _harmony = new Harmony(Guid);
         if (eventProbe.Value) FsmEventProbe.Install(_harmony, _log);
         if (saveTrace.Value) SaveTraceProbe.Install(_harmony, _log);
+        if (_watch != null) FsmWatchProbe.Install(_harmony, _log, _watch);
         _saveRedirect?.InstallFixedNames(_harmony);
         if (worldProbe.Value) _world = new WorldProbe(_log);
         _steam = new SteamProbe(_log);
