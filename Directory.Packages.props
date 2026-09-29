@@ -1,0 +1,17 @@
+<Project>
+
+  <!-- Central package management: every version is pinned here, once, exactly (no floating ranges).
+       The game runs an old Mono (CLR 2 / .NET 3.5 profile), so nothing in this file may ever be
+       loaded in-game. In-game code has zero runtime dependencies beyond BepInEx and HarmonyX. -->
+
+  <ItemGroup Label=".NET Framework 3.5 targeting on any OS (reference assemblies, compile-time only)">
+    <PackageVersion Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" />
+  </ItemGroup>
+
+  <ItemGroup Label="Tests (game-free)">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+</Project>

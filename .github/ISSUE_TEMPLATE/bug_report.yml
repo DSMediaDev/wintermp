@@ -1,0 +1,27 @@
+name: Bug report
+description: Something is broken or behaving strangely.
+labels: [ bug ]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you expect, and what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How can we reproduce it?
+      placeholder: "1. Start a server with ...\n2. Join with ...\n3. ..."
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: WinterMP version, My Winter Car build (first line of the game's changelog.txt), and your OS.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Server console output, or BepInEx/LogOutput.log from the game folder. Paste or attach.
+      render: text

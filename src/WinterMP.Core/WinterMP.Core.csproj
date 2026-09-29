@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Pure logic, protocol and transports. No UnityEngine, no game assemblies, no dependencies.
+       Compiled twice from one source: net35 loads inside the game's old Mono runtime, net10.0 runs
+       in the dedicated server and the test suite. The net35 build is the runtime-ceiling check. -->
+  <PropertyGroup>
+    <TargetFrameworks>net35;net10.0</TargetFrameworks>
+    <AssemblyName>WinterMP.Core</AssemblyName>
+    <RootNamespace>WinterMP.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(TargetFramework)' == 'net35'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="WinterMP.Core.Tests" />
+  </ItemGroup>
+
+</Project>

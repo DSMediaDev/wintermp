@@ -1,0 +1,11 @@
+{
+  "solution": {
+    "path": "WinterMP.sln",
+    "projects": [
+      "src\\WinterMP.Core\\WinterMP.Core.csproj",
+      "src\\WinterMP.Server\\WinterMP.Server.csproj",
+      "tests\\WinterMP.Core.Tests\\WinterMP.Core.Tests.csproj",
+      "tools\\WinterMP.Bot\\WinterMP.Bot.csproj"
+    ]
+  }
+}

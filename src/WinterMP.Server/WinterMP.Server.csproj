@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The dedicated server. Modern .NET, no Unity, no game files: it runs on any Windows or Linux
+       box, including ones that have never had the game installed. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>WinterMP.Server</AssemblyName>
+    <RootNamespace>WinterMP.Server</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- GC mode pinned rather than left to environment defaults, so a dev PC and a container with a
+         memory limit behave the same. A small single-loop server gains nothing from server GC. -->
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WinterMP.Core\WinterMP.Core.csproj" />
+  </ItemGroup>
+
+</Project>

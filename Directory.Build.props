@@ -1,0 +1,33 @@
+<Project>
+
+  <!-- THE version: single source of truth. Stamped into every assembly and the plugin metadata.
+       The network protocol version is deliberately separate (WinterMP.Core/Protocol/ProtocolInfo.cs)
+       and only changes when the wire format does. -->
+  <PropertyGroup Label="Version">
+    <Version>0.0.1</Version>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Identity">
+    <Product>WinterMP</Product>
+    <Company>DSMedia</Company>
+    <Authors>DSMedia (Cody Moran)</Authors>
+    <Copyright>Copyright (c) 2026 DSMedia (Cody Moran)</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/DSMediaDev/wintermp</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Build conventions">
+    <!-- One language version for every target, including net35: modern syntax is fine, but anything
+         that needs runtime support newer than .NET 3.5 fails the net35 compile - by design. -->
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Game-touching projects opt in explicitly; everything else is game-free by construction. -->
+    <WinterMpGameProject>false</WinterMpGameProject>
+  </PropertyGroup>
+
+</Project>

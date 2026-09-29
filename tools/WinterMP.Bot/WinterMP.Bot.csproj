@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Headless test player: joins a server with no game running. The one-PC test rig's second
+       body, and a quick way for a server operator to check their server is reachable. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>WinterMP.Bot</AssemblyName>
+    <RootNamespace>WinterMP.Bot</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\WinterMP.Core\WinterMP.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,66 @@
+<Project>
+
+  <!-- ============================================================================================
+       Game assembly resolution for the game-touching projects (WinterMP.Shim, WinterMP.Census).
+
+       Game assemblies are NEVER committed to this repo or redistributed. Copy this file to
+       Directory.Build.targets (git-ignored), then point MwcInstallDir at your own LEGAL copy of
+       My Winter Car with BepInEx 5 (x64) installed into it.
+
+       Only projects that set WinterMpGameProject to true receive these references. Core and
+       Server stay game-free: a stray PlayMaker or UnityEngine using there will not even compile.
+       ============================================================================================ -->
+
+  <PropertyGroup>
+    <!-- EDIT THIS: your My Winter Car install directory. -->
+    <MwcInstallDir Condition="'$(MwcInstallDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\My Winter Car</MwcInstallDir>
+    <MwcManaged>$(MwcInstallDir)\mywintercar_Data\Managed</MwcManaged>
+    <BepInExCore>$(MwcInstallDir)\BepInEx\core</BepInExCore>
+
+    <!-- Optional: copy build output straight into the game's BepInEx\plugins folder after each
+         build. Leave false if you prefer to copy by hand. -->
+    <WinterMpDeployToGame Condition="'$(WinterMpDeployToGame)' == ''">false</WinterMpDeployToGame>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(WinterMpGameProject)' == 'true'">
+    <!-- Loader + patcher: provided at runtime by BepInEx; referenced for compile only, never copied. -->
+    <Reference Include="BepInEx">
+      <HintPath>$(BepInExCore)\BepInEx.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(BepInExCore)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+
+    <!-- Game + Unity 5.0, resolved by name from the local install. -->
+    <Reference Include="UnityEngine">
+      <HintPath>$(MwcManaged)\UnityEngine.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="PlayMaker">
+      <HintPath>$(MwcManaged)\PlayMaker.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(MwcManaged)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <!-- The game's own Steamworks.NET lives here. We use the game's Steam client, never our own. -->
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>$(MwcManaged)\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="WinterMpDeploy" AfterTargets="Build"
+          Condition="'$(WinterMpGameProject)' == 'true' And '$(WinterMpDeployToGame)' == 'true' And '$(WinterMpPluginFolder)' != ''">
+    <ItemGroup>
+      <_WinterMpDeployFiles Include="$(TargetDir)*.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_WinterMpDeployFiles)"
+          DestinationFolder="$(MwcInstallDir)\BepInEx\plugins\$(WinterMpPluginFolder)"
+          SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

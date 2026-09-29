@@ -1,0 +1,55 @@
+## Build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+dist/
+artifacts/
+TestResults/
+
+## Per-contributor game paths: only the .EXAMPLE is committed
+Directory.Build.targets
+
+## Never commit game files (safety net)
+Assembly-CSharp*.dll
+Assembly-UnityScript*.dll
+UnityEngine*.dll
+PlayMaker.dll
+ES2.dll
+MoodkieSecurity.dll
+cInput.dll
+HOTween.dll
+0Harmony*.dll
+BepInEx*.dll
+mywintercar_Data/
+*.assets
+*.resS
+mainData
+sharedassets*
+
+## Game saves and census output are local data, never source
+census/
+
+## Packaging output
+*.zip
+
+## Local scratch
+scratch/
+
+## IDE / tooling
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+_ReSharper*/
+
+## OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+## NuGet
+*.nupkg
+packages/
+.nuget/
