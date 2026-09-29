@@ -9,6 +9,8 @@ namespace WinterMP.Census;
 
 /// <summary>
 /// Writes a census of each level a few seconds after it loads (and on demand with F9).
+/// The first level is already running when plugins load, so it only gets a census with the launch
+/// flag "-wintermp-census-startup-after S" (S seconds after start-up).
 /// Launch flag "-wintermp-census-exit-after N" ends the process right after censusing level N,
 /// so a whole run can be scripted. The process is killed rather than quit on purpose: nothing
 /// in the game gets a chance to save on the way out.
@@ -31,6 +33,11 @@ public sealed class CensusPlugin : BaseUnityPlugin
         for (var i = 0; i < args.Length - 1; i++)
         {
             if (args[i] == "-wintermp-census-exit-after") int.TryParse(args[i + 1], out _exitAfterLevel);
+            if (args[i] == "-wintermp-census-startup-after" && float.TryParse(args[i + 1], out var seconds))
+            {
+                _dueLevel = Application.loadedLevel;
+                _dueAt = Time.realtimeSinceStartup + seconds;
+            }
         }
 
         _runFolder = Path.Combine(Path.Combine(Paths.BepInExRootPath, "census"), DateTime.Now.ToString("yyyyMMdd-HHmmss"));

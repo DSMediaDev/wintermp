@@ -110,6 +110,7 @@ public sealed class Plugin : BaseUnityPlugin
             if (_autoSteamProbe) _steam.Run();
         }
 
+        if (_autoContinue && Application.loadedLevelName == "SplashScreen") AcceptDisclaimer();
         if (_continueAt >= 0f && now >= _continueAt)
         {
             _continueAt = -1f;
@@ -132,6 +133,18 @@ public sealed class Plugin : BaseUnityPlugin
             Logger.LogInfo("Exit timer reached; ending the process without saving.");
             Process.GetCurrentProcess().Kill();
         }
+    }
+
+    // Scripted runs only: the splash screen's early-access disclaimer waits for a click or Enter. Enter
+    // sends SKIP to the button's FSM, which loads the main menu; this sends the same event once the
+    // disclaimer is showing.
+    private void AcceptDisclaimer()
+    {
+        var button = PlayMakerFSM.FsmList.FirstOrDefault(fsm => fsm.gameObject.name == "Button" && fsm.FsmName == "Button"
+            && fsm.transform.parent != null && fsm.transform.parent.name == "Disclaimer");
+        if (button == null || !button.gameObject.activeInHierarchy || button.Fsm.ActiveStateName == "State 1") return;
+        Logger.LogInfo("Auto-continue: accepting the splash screen disclaimer.");
+        button.SendEvent("SKIP");
     }
 
     // The main menu's Continue button is an FSM; entering its load state is what a click does.
