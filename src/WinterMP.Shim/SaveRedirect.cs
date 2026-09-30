@@ -20,15 +20,19 @@ internal sealed class SaveRedirect
     private static readonly string[] GlobalNames = { "SavePlayerData", "SaveCarparts", "SaveItems" };
 
     // World files the game names with fixed strings inside individual FSMs. These are caught where
-    // the save library parses a path. Deliberately absent: options.txt (this machine's settings) and
-    // graveyard.txt / trophies*.txt (records that outlive any one world). items2.txt is normally
-    // reached through its global, but the main menu's new-game wipe deletes it by fixed name.
-    // items.txt holds loose items (bottles and the like: position, fluid, used up) and appears in
-    // saves only once the player has had such items.
-    private static readonly string[] FixedWorldFiles = { "notepad.txt", "speedcam.txt", "hockeyleague.txt", "meshsave.txt", "defaultES2File.txt", "items2.txt", "items.txt" };
+    // the save library parses a path. items2.txt is normally reached through its global, but the main
+    // menu's new-game wipe deletes it by fixed name. items.txt holds loose items (bottles and the
+    // like: position, fluid, used up) and appears in saves only once the player has had such items.
+    // graveyard.txt is the list of deaths shown at the church; trophies.txt and trophies1999.txt are
+    // rally and snow loop wins. Both are part of the world everyone sees, so they move with it.
+    private static readonly string[] FixedWorldFiles =
+    {
+        "notepad.txt", "speedcam.txt", "hockeyleague.txt", "meshsave.txt", "defaultES2File.txt", "items2.txt", "items.txt",
+        "graveyard.txt", "trophies.txt", "trophies1999.txt",
+    };
 
-    // Fixed names we know about and leave alone on purpose.
-    private static readonly string[] KnownLocalFiles = { "options.txt", "graveyard.txt", "trophies.txt", "trophies1999.txt" };
+    // Fixed names we know about and leave alone on purpose: this machine's settings.
+    private static readonly string[] KnownLocalFiles = { "options.txt" };
 
     private static readonly char[] PathMarks = { '/', Path.DirectorySeparatorChar, ':' };
     private static readonly HashSet<string> Unlisted = new(StringComparer.OrdinalIgnoreCase);
