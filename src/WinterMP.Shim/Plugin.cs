@@ -33,6 +33,12 @@ public sealed class Plugin : BaseUnityPlugin
     private ConfigEntry<KeyCode> _saveTraceKey = null!;
     private bool _autoContinue;
     private float _continueAt = -1f;
+    private bool _autoNewGame;
+    private float _newGameAt = -1f;
+    private float _fillAt = -1f;
+    private float _beginAt = -1f;
+    private bool _skipIntro;
+    private float _skipIntroAt = -1f;
     private float _exitAfterSeconds = -1f;
     private float _exitAt = -1f;
     private float _saveGameAfterSeconds = -1f;
@@ -58,6 +64,7 @@ public sealed class Plugin : BaseUnityPlugin
             if (args[i] == "-wintermp-steam-probe") _autoSteamProbe = true;
             if (args[i] == "-wintermp-save-folder" && i + 1 < args.Length) _saveRedirect = SaveRedirect.Create(_log, args[i + 1]);
             if (args[i] == "-wintermp-auto-continue") _autoContinue = true;
+            if (args[i] == "-wintermp-auto-new-game") _autoNewGame = true;
             if (args[i] == "-wintermp-savegame-after-seconds" && i + 1 < args.Length) float.TryParse(args[i + 1], out _saveGameAfterSeconds);
             if (args[i] == "-wintermp-exit-after-seconds" && i + 1 < args.Length) float.TryParse(args[i + 1], out _exitAfterSeconds);
             if (args[i] == "-wintermp-watch" && i + 1 < args.Length) _watch = args[i + 1];
@@ -110,11 +117,36 @@ public sealed class Plugin : BaseUnityPlugin
             if (_autoSteamProbe) _steam.Run();
         }
 
-        if (_autoContinue && Application.loadedLevelName == "SplashScreen") AcceptDisclaimer();
+        if ((_autoContinue || _autoNewGame) && Application.loadedLevelName == "SplashScreen") AcceptDisclaimer();
         if (_continueAt >= 0f && now >= _continueAt)
         {
             _continueAt = -1f;
             PressContinue();
+        }
+
+        if (_newGameAt >= 0f && now >= _newGameAt)
+        {
+            _newGameAt = -1f;
+            if (PressNewGame()) _fillAt = now + 2f;
+        }
+
+        if (_fillAt >= 0f && now >= _fillAt)
+        {
+            _fillAt = -1f;
+            FillLicence();
+            _beginAt = now + 2f;
+        }
+
+        if (_beginAt >= 0f && now >= _beginAt)
+        {
+            _beginAt = -1f;
+            PressBegin();
+        }
+
+        if (_skipIntroAt >= 0f && now >= _skipIntroAt)
+        {
+            _skipIntroAt = -1f;
+            if (EnterState("Auto new game", "Button", "SkipIntro", "State 4")) Logger.LogInfo("Auto new game: skipping the intro.");
         }
 
         if (_saveGameAt >= 0f && now >= _saveGameAt)
@@ -150,23 +182,55 @@ public sealed class Plugin : BaseUnityPlugin
     // The main menu's Continue button is an FSM; entering its load state is what a click does.
     private void PressContinue()
     {
-        var button = PlayMakerFSM.FsmList.FirstOrDefault(fsm => fsm.gameObject.name == "ButtonContinue" && fsm.FsmName == "SetSize");
-        if (button == null)
+        if (EnterState("Auto-continue", "ButtonContinue", "SetSize", "Reset globals 2")) Logger.LogInfo("Auto-continue: loading the saved game.");
+    }
+
+    // Scripted runs only: New game opens the licence card, whose name fields clear themselves as it opens.
+    private bool PressNewGame()
+    {
+        if (!EnterState("Auto new game", "ButtonNewgame", "SetSize", "State 1")) return false;
+        Logger.LogInfo("Auto new game: opened the licence card.");
+        return true;
+    }
+
+    // Fills in the card the way typing would. The card only shows its Begin button once a last name is
+    // in, so Begin is pressed on a later frame.
+    private void FillLicence()
+    {
+        var globals = FsmVariables.GlobalVariables;
+        globals.GetFsmString("PlayerFirstName").Value = "Test";
+        globals.GetFsmString("PlayerLastName").Value = "Driver";
+        globals.GetFsmBool("PlayerPermaDeath").Value = false;
+    }
+
+    // Begin: the game deletes the old world, writes the new player's details and loads the intro.
+    private void PressBegin()
+    {
+        if (!EnterState("Auto new game", "ButtonBegin", "SetSize", "State 2")) return;
+        _skipIntro = true;
+        Logger.LogInfo("Auto new game: starting a new game as "
+            + FsmVariables.GlobalVariables.GetFsmString("PlayerName").Value + ", permadeath off.");
+    }
+
+    private bool EnterState(string purpose, string objectName, string fsmName, string stateName)
+    {
+        var fsm = PlayMakerFSM.FsmList.FirstOrDefault(f => f.gameObject.name == objectName && f.FsmName == fsmName);
+        if (fsm == null)
         {
-            Logger.LogWarning("Auto-continue: ButtonContinue/SetSize not found (is there a save to continue?).");
-            return;
+            Logger.LogWarning(purpose + ": " + objectName + "/" + fsmName + " not found.");
+            return false;
         }
 
-        var state = button.Fsm.GetState("Reset globals 2");
+        var state = fsm.Fsm.GetState(stateName);
         var switchState = AccessTools.Method(typeof(Fsm), "SwitchState");
         if (state == null || switchState == null)
         {
-            Logger.LogWarning("Auto-continue: the Continue button's load state is missing in this game build.");
-            return;
+            Logger.LogWarning(purpose + ": " + objectName + "/" + fsmName + " has no state '" + stateName + "' in this game build.");
+            return false;
         }
 
-        Logger.LogInfo("Auto-continue: loading the saved game.");
-        switchState.Invoke(button.Fsm, new object[] { state });
+        switchState.Invoke(fsm.Fsm, new object[] { state });
+        return true;
     }
 
     private void OnGUI()
@@ -184,7 +248,19 @@ public sealed class Plugin : BaseUnityPlugin
             _continueAt = Time.realtimeSinceStartup + 15f;
         }
 
-        if (_exitAfterSeconds > 0f && Application.loadedLevelName == "GAME") _exitAt = Time.realtimeSinceStartup + _exitAfterSeconds;
+        if (_autoNewGame && Application.loadedLevelName == "MainMenu")
+        {
+            _autoNewGame = false;
+            _newGameAt = Time.realtimeSinceStartup + 15f;
+        }
+
+        if (_skipIntro && Application.loadedLevelName == "Intro")
+        {
+            _skipIntro = false;
+            _skipIntroAt = Time.realtimeSinceStartup + 3f;
+        }
+
+        if (_exitAfterSeconds > 0f && Application.loadedLevelName == "GAME" && _exitAt < 0f) _exitAt = Time.realtimeSinceStartup + _exitAfterSeconds;
         if (_saveGameAfterSeconds > 0f && Application.loadedLevelName == "GAME") _saveGameAt = Time.realtimeSinceStartup + _saveGameAfterSeconds;
         if (Application.loadedLevelName == "GAME") _saveAudit?.Start(Time.realtimeSinceStartup);
         if (level != 1 && level != 3) Logger.LogInfo("Level " + level + " (" + Application.loadedLevelName + ") loaded.");
